@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="style.css" />
+  <title>Simple Blog Creator</title>
+</head>
+<body>
+  <header>
+    <h1>Simple Blog Creator</h1>
+  </header>
+  <main>
+    <button id="apiBtn">Create Blog Using API</button>
+    <button id="manualBtn">Create Blog Manually</button>
+
+    <div id="formContainer"></div>
+    <div class="blog-container" id="blogContainer"></div>
+  </main>
+
+  <script>
+    const apiBtn = document.getElementById('apiBtn');
+    const manualBtn = document.getElementById('manualBtn');
+    const formContainer = document.getElementById('formContainer');
+    const blogContainer = document.getElementById('blogContainer');
+
+    let blogs = [];
+
+    // Load blogs from localStorage
+    window.onload = () => {
+      const stored = localStorage.getItem('blogs');
+      if (stored) {
+        blogs = JSON.parse(stored);
+        blogs.forEach(b => createCard(b));
+      }
+    };
+
+    apiBtn.onclick = () => {
+      formContainer.innerHTML = `
+        <form id="apiForm">
+          <input type="text" id="apiTitle" placeholder="Enter blog title" required />
+          <button type="submit">Search Blog</button>
+        </form>
+      `;
+      document.getElementById('apiForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('apiTitle').value.trim();
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts');
+        const data = await res.json();
+        const found = data.find(post => post.title.toLowerCase() === title.toLowerCase());
+        if (found) {
+          const blog = {
+            id: Date.now(),
+            title: found.title,
+            body: found.body
+          };
+          blogs.push(blog);
+          saveBlogs();
+          createCard(blog);
+          formContainer.innerHTML = '';
+        } else {
+          alert('Blog not found!');
+        }
+      };
+    };
+
+    manualBtn.onclick = () => {
+      formContainer.innerHTML = `
+        <form id="manualForm">
+          <input type="text" id="manualTitle" placeholder="Title" required /><br><br>
+          <textarea id="manualBody" placeholder="Blog description" required></textarea><br><br>
+          <button type="submit">Create Blog</button>
+        </form>
+      `;
+      document.getElementById('manualForm').onsubmit = (e) => {
+        e.preventDefault();
+        const title = document.getElementById('manualTitle').value.trim();
+        const body = document.getElementById('manualBody').value.trim();
+        const blog = {
+          id: Date.now(),
+          title,
+          body
+        };
+        blogs.push(blog);
+        saveBlogs();
+        createCard(blog);
+        formContainer.innerHTML = '';
+      };
+    };
+
+    function createCard(blog) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = blog.id;
+      card.innerHTML = `
+        <h3 contenteditable="false">${blog.title}</h3>
+        <p contenteditable="false">${blog.body}</p>
+        <button class="editBtn">Edit</button>
+        <button class="saveBtn" disabled>Save</button>
+        <button class="deleteBtn">Delete</button>
+      `;
+
+      card.querySelector('.editBtn').onclick = () => {
+        card.querySelector('h3').contentEditable = true;
+        card.querySelector('p').contentEditable = true;
+        card.querySelector('.saveBtn').disabled = false;
+      };
+
+      card.querySelector('.saveBtn').onclick = () => {
+        const id = parseInt(card.dataset.id);
+        const newTitle = card.querySelector('h3').innerText.trim();
+        const newBody = card.querySelector('p').innerText.trim();
+        const index = blogs.findIndex(b => b.id === id);
+        if (index !== -1) {
+          blogs[index].title = newTitle;
+          blogs[index].body = newBody;
+          saveBlogs();
+          card.querySelector('h3').contentEditable = false;
+          card.querySelector('p').contentEditable = false;
+          card.querySelector('.saveBtn').disabled = true;
+        }
+      };
+
+      card.querySelector('.deleteBtn').onclick = () => {
+        const id = parseInt(card.dataset.id);
+        blogs = blogs.filter(b => b.id !== id);
+        saveBlogs();
+        card.remove();
+      };
+
+      blogContainer.appendChild(card);
+    }
+
+    function saveBlogs() {
+      localStorage.setItem('blogs', JSON.stringify(blogs));
+    }
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
